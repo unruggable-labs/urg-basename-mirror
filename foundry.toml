@@ -1,0 +1,8 @@
+# https://book.getfoundry.sh/reference/config/overview
+
+[profile.default]
+src = "contracts"
+remappings = [
+	'@unruggable/=node_modules/@unruggable/'
+]
+libs = ["node_modules", "lib"]

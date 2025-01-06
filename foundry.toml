@@ -3,6 +3,7 @@
 [profile.default]
 src = "contracts"
 remappings = [
-	'@unruggable/=node_modules/@unruggable/'
+	'@unruggable/=node_modules/@unruggable/',
+	'@ensdomains/=node_modules/@ensdomains/'
 ]
 libs = ["node_modules", "lib"]

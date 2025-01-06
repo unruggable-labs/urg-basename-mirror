@@ -86,10 +86,6 @@ contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
         }
     }
 
-    function dnsEncodeName(string memory name) external pure returns (bytes memory dnsName, bytes32 node) {
-        (dnsName, node) = name.dnsEncodeName();
-    }
-
     /**
      * @dev Port of findResolver func from UniversalResolver to parse DNS encoded names to string
      */
@@ -106,6 +102,7 @@ contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
 
     /**
      * @dev Converts DNS encoded yoursubname.yourname.eth to yoursubname.yourname.base.eth
+     * Basename => base.eth
      */
     function getBasename(bytes calldata dnsEncoded) public pure returns (string memory, string memory, bytes32) {
         bytes memory fullname = parseDnsName(dnsEncoded, 0);

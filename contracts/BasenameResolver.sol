@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {GatewayFetcher, GatewayRequest} from "@unruggable/gateways/contracts/GatewayFetcher.sol";
-import {GatewayFetchTarget, IGatewayVerifier} from "@unruggable/gateways/contracts/GatewayFetchTarget.sol";
-
-interface IExtendedResolver {
-    function resolve(
-        bytes memory,
-        bytes memory
-    ) external view returns (bytes memory);
-}
+import { GatewayFetcher, GatewayRequest } from '@unruggable/gateways/contracts/GatewayFetcher.sol';
+import { GatewayFetchTarget, IGatewayVerifier } from '@unruggable/gateways/contracts/GatewayFetchTarget.sol';
+import { IExtendedResolver } from '@ensdomains/ens-contracts/contracts/resolvers/profiles/IExtendedResolver.sol';
+import { NameEncoder } from '@ensdomains/ens-contracts/contracts/utils/NameEncoder.sol';
+import { LibBytes } from 'solady/src/utils/LibBytes.sol';
 
 bytes4 constant SEL_addr60 = 0x3b3b57de; // addr(byte32)
 bytes4 constant SEL_addr = 0xf1cb7e06; // addr(bytes32,uint256)
@@ -21,11 +17,9 @@ uint256 constant SLOT_ADDR = 2;
 uint256 constant SLOT_TEXT = 10;
 uint256 constant SLOT_CONTENTHASH = 3;
 
-// https://adraffy.github.io/keccak.js/test/demo.html#algo=namehash&s=base.eth&escape=1&encoding=utf8
-bytes32 constant NODE_BASE_ETH = 0xff1e3c0eb00ec714e34b6114125fbde1dea2f24a72fbf672e7b7fd5690328e10;
-
 contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
     using GatewayFetcher for GatewayRequest;
+    using NameEncoder for string;
 
     IGatewayVerifier immutable _verifier;
     address immutable _target;
@@ -39,25 +33,21 @@ contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
         return x == type(IExtendedResolver).interfaceId;
     }
 
-    function resolve(
-        bytes calldata name,
-        bytes calldata data
-    ) external view returns (bytes memory) {
-        bytes32 label = _leadingLabelhash(name);
-        bytes32 node = keccak256(abi.encode(NODE_BASE_ETH, label));
+    function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory) {
+        (, , bytes32 node) = getBasename(name);
         GatewayRequest memory req = GatewayFetcher.newRequest(1);
-        req.setTarget(_target);
-        req.push(node); // ==> node
-        req.setSlot(SLOT_VERSIONS);
+        req.setTarget(_target); // target the base resolver
+        req.push(node); // push the namehash of "raffy.base.eth" at offset 0
+        req.setSlot(SLOT_VERSIONS); // recordVersions[]
         req.pushStack(0);
-        req.follow();
-        req.read(); // ==> version
+        req.follow(); // recordVersions[node]
+        req.read(); // leave version on stack at offset 1
         if (bytes4(data) == SEL_addr60) {
-            req.setSlot(SLOT_ADDR);
-            req.pushStack(1).follow();
-            req.pushStack(0).follow();
-            req.push(60).follow();
-            req.readBytes().setOutput(0);
+            req.setSlot(SLOT_ADDR); // addresses[]
+            req.pushStack(1).follow(); // addresses[version]
+            req.pushStack(0).follow(); // addresses[version][node]
+            req.push(60).follow(); // addresses[version][node][60]
+            req.readBytes().setOutput(0); // save address to output 0
         } else if (bytes4(data) == SEL_addr) {
             (, uint256 coinType) = abi.decode(data[4:], (bytes32, uint256));
             req.setSlot(SLOT_ADDR);
@@ -80,13 +70,7 @@ contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
         } else {
             return new bytes(64);
         }
-        fetch(
-            _verifier,
-            req,
-            this.resolveCallback.selector,
-            data,
-            new string[](0)
-        );
+        fetch(_verifier, req, this.resolveCallback.selector, data, new string[](0));
     }
 
     function resolveCallback(
@@ -102,10 +86,37 @@ contract BasenameResolver is GatewayFetchTarget, IExtendedResolver {
         }
     }
 
-    function _leadingLabelhash(
-        bytes calldata name
-    ) internal pure returns (bytes32) {
-        uint256 n = uint8(name[0]);
-        return keccak256(name[1:1 + n]);
+    /**
+     * @dev Port of findResolver func from UniversalResolver to parse DNS encoded names to string
+     */
+    function parseDnsName(bytes calldata name, uint256 offset) internal pure returns (bytes memory) {
+        uint256 labelLength = uint256(uint8(name[offset]));
+        if (labelLength == 0) {
+            return new bytes(0);
+        }
+        uint256 nextLabel = offset + labelLength + 1;
+        bytes memory namebytes = name[offset + 1:nextLabel];
+        bytes memory parentname = parseDnsName(name, nextLabel);
+        return parentname.length != 0 ? bytes.concat(namebytes, '.', parentname) : namebytes;
+    }
+
+    /**
+     * @dev Converts DNS encoded yoursubname.yourname.eth to yoursubname.yourname.base.eth
+     * Basename => base.eth
+     */
+    function getBasename(bytes calldata dnsEncoded) public pure returns (string memory, string memory, bytes32) {
+        bytes memory fullname = parseDnsName(dnsEncoded, 0);
+        bytes[] memory labelArray = LibBytes.split(fullname, bytes('.'));
+        bytes memory basename = labelArray[0];
+
+        // Remove .eth and append with .base.eth
+        for (uint i = 1; i < labelArray.length - 1; ++i) {
+            basename = bytes.concat(basename, '.', labelArray[i]);
+        }
+        basename = bytes.concat(basename, '.base.eth');
+
+        (, bytes32 node) = string(basename).dnsEncodeName();
+
+        return (string(fullname), string(basename), node);
     }
 }

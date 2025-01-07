@@ -1,19 +1,19 @@
 {
-  "name": "urg-basename-mirror",
-  "module": "index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "@adraffy/blocksmith": "^0.1.47",
-    "@ensdomains/ens-contracts": "^1.2.2",
-    "@resolverworks/ezccip": "^0.0.22",
-    "@unruggable/gateways": "^0.1.5",
-    "ethers": "^6.13.4",
-    "solady": "^0.0.288"
-  }
+	"name": "urg-basename-mirror",
+	"type": "module",
+	"scripts": {
+		"test-forge": "forge test -C test/"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"@adraffy/blocksmith": "^0.1.47",
+		"@resolverworks/ezccip": "^0.0.22",
+		"@unruggable/gateways": "^0.1.5",
+		"ethers": "^6.13.4"
+	}
 }

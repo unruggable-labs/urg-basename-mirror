@@ -2,6 +2,8 @@ import { Foundry } from "@adraffy/blocksmith";
 import { serve } from "@resolverworks/ezccip/serve";
 import { EthSelfRollup, Gateway } from "@unruggable/gateways";
 import { EnsResolver } from "ethers/providers";
+import { BASE_L2_RESOLVER } from "./constants.js";
+import { ZeroAddress } from "ethers";
 
 const foundry = await Foundry.launch({
 	fork: "https://mainnet.base.org",
@@ -30,11 +32,7 @@ const SelfVerifier = await foundry.deploy({
 
 const BasenameResolver = await foundry.deploy({
 	file: "BasenameResolver",
-	args: [
-		SelfVerifier,
-		// https://basescan.org/address/0xc6d566a56a1aff6508b41f6c90ff131615583bcd#code
-		"0xc6d566a56a1aff6508b41f6c90ff131615583bcd",
-	],
+	args: [ZeroAddress, ZeroAddress, SelfVerifier, BASE_L2_RESOLVER],
 });
 
 const name = "adraffy.eth";

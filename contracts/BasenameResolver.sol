@@ -14,8 +14,6 @@ import {IContentHashResolver} from "@ensdomains/ens-contracts/contracts/resolver
 import {INameWrapper} from "@ensdomains/ens-contracts/contracts/wrapper/INameWrapper.sol";
 import {Namehash} from "./Namehash.sol";
 
-import "forge-std/console2.sol";
-
 contract BasenameResolver is
     GatewayFetchTarget,
     IExtendedResolver,
@@ -80,7 +78,6 @@ contract BasenameResolver is
         bytes calldata data
     ) external view returns (bytes memory) {
         bytes32 node = getNode(name);
-		console2.logBytes32(node);
         GatewayRequest memory req = GatewayFetcher.newRequest(1);
         req.setTarget(baseResolver); // target the base resolver
         req.push(node); // namehash, leave on stack at offset 0

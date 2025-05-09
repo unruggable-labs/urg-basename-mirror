@@ -2,12 +2,12 @@ import { Foundry } from "@adraffy/blocksmith";
 import { serve } from "@resolverworks/ezccip/serve";
 import { EthSelfRollup, Gateway } from "@unruggable/gateways";
 import { EnsResolver } from "ethers/providers";
-import { BASE_L2_RESOLVER } from "./constants.js";
+import { BASE_L2_RESOLVER, MAINNET_PROVIDER_URL } from "./constants.js";
 import { ZeroAddress } from "ethers";
 
 const foundry = await Foundry.launch({
-	fork: "https://mainnet.base.org",
-	infoLog: true,
+	fork: MAINNET_PROVIDER_URL,
+	infoLog: false,
 });
 
 // setup gateway
@@ -32,7 +32,7 @@ const SelfVerifier = await foundry.deploy({
 
 const BasenameResolver = await foundry.deploy({
 	file: "BasenameResolver",
-	args: [ZeroAddress, ZeroAddress, SelfVerifier, BASE_L2_RESOLVER],
+	args: [ZeroAddress, ZeroAddress, SelfVerifier, [], BASE_L2_RESOLVER],
 });
 
 const name = "adraffy.eth";

@@ -1,21 +1,21 @@
 import { Foundry } from "@adraffy/blocksmith";
 import { dnsEncode, namehash } from "ethers/hash";
-import { hijackRegistryOwner } from "./ens-utils.js";
 import {
 	ENS_REGISTRY,
 	NAME_WRAPPER,
 	BASE_VERIFIER,
 	BASE_L2_RESOLVER,
+	MAINNET_PROVIDER_URL,
 } from "./constants.js";
 
 const foundry = await Foundry.launch({
-	fork: "https://rpc.ankr.com/eth",
+	fork: MAINNET_PROVIDER_URL,
 	infoLog: false,
 });
 
 const BasenameResolver = await foundry.deploy({
 	file: "BasenameResolver",
-	args: [ENS_REGISTRY, NAME_WRAPPER, BASE_VERIFIER, BASE_L2_RESOLVER],
+	args: [ENS_REGISTRY, NAME_WRAPPER, BASE_VERIFIER, [], BASE_L2_RESOLVER],
 });
 
 //
@@ -29,7 +29,11 @@ console.log(namehash("abc.raffy.base.eth"));
 console.log(await BasenameResolver.getNode(dnsEncode("abc.raffy.eth")));
 
 //
-await hijackRegistryOwner(foundry, "chonk.xyz");
+await foundry.overrideENS({
+	name: "chonk.xyz",
+	owner: foundry.wallets.admin.address,
+	resolver: null,
+});
 await foundry.confirm(
 	BasenameResolver.setNode(
 		namehash("chonk.xyz"),
@@ -41,7 +45,11 @@ console.log(namehash("abc.chonker.base.eth"));
 console.log(await BasenameResolver.getNode(dnsEncode("abc.chonk.xyz")));
 
 //
-await hijackRegistryOwner(foundry, "a.b.c");
+await foundry.overrideENS({
+	name: "a.b.c",
+	owner: foundry.wallets.admin.address,
+	resolver: null,
+});
 await foundry.confirm(
 	BasenameResolver.setNode(namehash("a.b.c"), namehash("chonker.base.eth"))
 );

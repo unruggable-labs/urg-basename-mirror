@@ -11,7 +11,7 @@
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
-		"@adraffy/blocksmith": "^0.1.47",
+		"@adraffy/blocksmith": "^0.1.52",
 		"@resolverworks/ezccip": "^0.0.22",
 		"@unruggable/gateways": "^0.1.5",
 		"ethers": "^6.13.4"

@@ -5,16 +5,24 @@ import {
 	NAME_WRAPPER,
 	BASE_VERIFIER,
 	BASE_L2_RESOLVER,
+	MAINNET_PROVIDER_URL,
+	GATEWAYS,
 } from "./constants.js";
 
 const foundry = await Foundry.launch({
-	fork: "https://rpc.ankr.com/eth",
+	fork: MAINNET_PROVIDER_URL,
 	infoLog: false,
 });
 
 const BasenameResolver = await foundry.deploy({
 	file: "BasenameResolver",
-	args: [ENS_REGISTRY, NAME_WRAPPER, BASE_VERIFIER, BASE_L2_RESOLVER],
+	args: [
+		ENS_REGISTRY,
+		NAME_WRAPPER,
+		BASE_VERIFIER,
+		GATEWAYS,
+		BASE_L2_RESOLVER,
+	],
 });
 
 const name = "adraffy.eth";

@@ -10,26 +10,11 @@ import {IExtendedResolver} from "@ensdomains/ens-contracts/contracts/resolvers/p
 import {IAddrResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/IAddrResolver.sol";
 import {IAddressResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/IAddressResolver.sol";
 import {ITextResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/ITextResolver.sol";
-import {IContentHashResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/IContenthashResolver.sol";
+import {IContentHashResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/IContentHashResolver.sol";
 import {INameWrapper} from "@ensdomains/ens-contracts/contracts/wrapper/INameWrapper.sol";
 import {Namehash} from "./Namehash.sol";
 
-// storage slots for Base L2Resolver
-// https://basescan.org/address/0xC6d566A56A1aFf6508b41f6c90ff131615583BCD#code
-uint256 constant SLOT_VERSIONS = 0;
-uint256 constant SLOT_ADDR = 2;
-uint256 constant SLOT_TEXT = 10;
-uint256 constant SLOT_CONTENTHASH = 3;
-
-// https://adraffy.github.io/keccak.js/test/demo.html#algo=namehash&s=eth&escape=1&encoding=utf8
-bytes32 constant NODE_ETH = 0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
-// https://adraffy.github.io/keccak.js/test/demo.html#algo=namehash&s=base.eth&escape=1&encoding=utf8
-bytes32 constant NODE_BASE_ETH = 0xff1e3c0eb00ec714e34b6114125fbde1dea2f24a72fbf672e7b7fd5690328e10;
-
-error Unauthorized();
-error Unreachable(bytes dnsname);
-
-event NodeChanged(bytes32 indexed node, bytes32 indexed basenode);
+import "forge-std/console2.sol";
 
 contract BasenameResolver is
     GatewayFetchTarget,
@@ -39,23 +24,43 @@ contract BasenameResolver is
 {
     using GatewayFetcher for GatewayRequest;
 
+    error UnsupportedResolverProfile(bytes4 selector);
+    error UnreachableName(bytes name);
+    error Unauthorized();
+
+    event NodeChanged(bytes32 indexed node, bytes32 indexed basenode);
+    event GatewayURLsChanged();
+
+	// storage slots for Base L2Resolver
+	// https://basescan.org/address/0xC6d566A56A1aFf6508b41f6c90ff131615583BCD#code
+	uint256 constant SLOT_VERSIONS = 0;
+	uint256 constant SLOT_ADDR = 2;
+	uint256 constant SLOT_TEXT = 10;
+	uint256 constant SLOT_CONTENTHASH = 3;
+
+	bytes32 constant NODE_ETH = keccak256(abi.encode(0, keccak256("eth")));
+	bytes32 constant NODE_BASE_ETH = keccak256(abi.encode(NODE_ETH, keccak256("base")));
+
     ENS immutable _ens;
     INameWrapper immutable _wrapper;
-    IGatewayVerifier immutable _verifier;
-    address immutable _target;
+    IGatewayVerifier public immutable baseVerifier;
+    string[] public gatewayURLs;
+    address public immutable baseResolver;
 
     mapping(bytes32 => bytes32) _aliases;
 
     constructor(
         ENS ens,
         INameWrapper wrapper,
-        IGatewayVerifier verifier,
-        address target
+        IGatewayVerifier _baseVerifier,
+        string[] memory gateways,
+        address _baseResolver
     ) Ownable(msg.sender) {
         _ens = ens;
         _wrapper = wrapper;
-        _verifier = verifier;
-        _target = target;
+        baseVerifier = _baseVerifier;
+        gatewayURLs = gateways;
+        baseResolver = _baseResolver;
         _aliases[NODE_ETH] = NODE_BASE_ETH;
     }
 
@@ -65,51 +70,58 @@ contract BasenameResolver is
             x == type(IExtendedResolver).interfaceId;
     }
 
+    function setGatewayURLs(string[] memory gateways) external onlyOwner {
+        gatewayURLs = gateways;
+        emit GatewayURLsChanged();
+    }
+
     function resolve(
-        bytes calldata dnsname,
+        bytes calldata name,
         bytes calldata data
     ) external view returns (bytes memory) {
-        bytes32 node = getNode(dnsname);
+        bytes32 node = getNode(name);
+		console2.logBytes32(node);
         GatewayRequest memory req = GatewayFetcher.newRequest(1);
-        req.setTarget(_target); // target the base resolver
+        req.setTarget(baseResolver); // target the base resolver
         req.push(node); // namehash, leave on stack at offset 0
         req.setSlot(SLOT_VERSIONS); // recordVersions
         req.pushStack(0).follow(); // recordVersions[node]
         req.read(); // version, leave on stack at offset 1
-        if (bytes4(data) == IAddrResolver.addr.selector) {
+        bytes4 selector = bytes4(data);
+        if (selector == IAddrResolver.addr.selector) {
             req.setSlot(SLOT_ADDR); // addr
             req.pushStack(1).follow(); // addr[version]
             req.pushStack(0).follow(); // addr[version][node]
             req.push(60).follow(); // addr[version][node][60]
             req.readBytes().setOutput(0);
-        } else if (bytes4(data) == IAddressResolver.addr.selector) {
+        } else if (selector == IAddressResolver.addr.selector) {
             (, uint256 coinType) = abi.decode(data[4:], (bytes32, uint256));
             req.setSlot(SLOT_ADDR); // addr
             req.pushStack(1).follow(); // addr[version]
             req.pushStack(0).follow(); // addr[version][node]
             req.push(coinType).follow(); // addr[version][node][coinType]
             req.readBytes().setOutput(0);
-        } else if (bytes4(data) == ITextResolver.text.selector) {
+        } else if (selector == ITextResolver.text.selector) {
             (, string memory key) = abi.decode(data[4:], (bytes32, string));
             req.setSlot(SLOT_TEXT); // text
             req.pushStack(1).follow(); // text[version]
             req.pushStack(0).follow(); // text[version][node]
             req.push(key).follow(); // text[version][node][key]
             req.readBytes().setOutput(0);
-        } else if (bytes4(data) == IContentHashResolver.contenthash.selector) {
+        } else if (selector == IContentHashResolver.contenthash.selector) {
             req.setSlot(SLOT_CONTENTHASH); // contenthash
             req.pushStack(1).follow(); // contenthash[version]
             req.pushStack(0).follow(); // contenthash[version][node]
             req.readBytes().setOutput(0);
         } else {
-            return new bytes(64);
+            revert UnsupportedResolverProfile(selector);
         }
         fetch(
-            _verifier,
+            baseVerifier,
             req,
             this.resolveCallback.selector,
             data,
-            new string[](0)
+            gatewayURLs
         );
     }
 
@@ -137,13 +149,13 @@ contract BasenameResolver is
             revert Unauthorized();
         }
         _aliases[node] = basenode;
-		emit NodeChanged(node, basenode);
+        emit NodeChanged(node, basenode);
     }
 
     // eg. "raffy.eth" => "raffy.base.eth"
     // (.*)[src] => (*.)[dst]
-    function getNode(bytes calldata dnsname) public view returns (bytes32) {
-        (bytes memory sizes, uint256 ptr, ) = Namehash.parse(dnsname);
+    function getNode(bytes calldata name) public view returns (bytes32) {
+        (bytes memory sizes, uint256 ptr, ) = Namehash.parse(name);
         bytes32 node = bytes32(0);
         for (uint256 i = sizes.length; i > 0; ) {
             (node, ptr) = Namehash.next(node, ptr, uint8(sizes[--i]));
@@ -159,6 +171,6 @@ contract BasenameResolver is
                 return basenode;
             }
         }
-        revert Unreachable(dnsname);
+        revert UnreachableName(name);
     }
 }

@@ -2,17 +2,17 @@ import { Foundry } from "@adraffy/blocksmith";
 import { serve } from "@resolverworks/ezccip/serve";
 import { EthSelfRollup, Gateway } from "@unruggable/gateways";
 import { EnsResolver } from "ethers/providers";
-import { BASE_L2_RESOLVER, MAINNET_PROVIDER_URL } from "./constants.js";
-import { ZeroAddress } from "ethers";
+import { ZeroAddress } from "ethers/constants";
+import { BASE_L2_RESOLVER, BASE_PROVIDER_URL } from "./constants.js";
 
 const foundry = await Foundry.launch({
-	fork: MAINNET_PROVIDER_URL,
+	fork: BASE_PROVIDER_URL,
 	infoLog: false,
 });
 
 // setup gateway
 const gateway = new Gateway(new EthSelfRollup(foundry.provider));
-const ccip = await serve(gateway, { protocol: "raw", log: true });
+const ccip = await serve(gateway, { protocol: "raw", log: false });
 
 // deploy local verifier
 function getArtifactPath(name: string) {

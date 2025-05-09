@@ -12,4 +12,4 @@ remappings = [
 
 # forge i foundry-rs/forge-std
 # forge i ensdomains/ens-contracts
-# forge i OpenZeppelin/openzeppelin-contracts@v5.0.2
+# forge i OpenZeppelin/openzeppelin-contracts@v5.3.0

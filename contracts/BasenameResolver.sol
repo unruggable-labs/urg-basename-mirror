@@ -29,15 +29,16 @@ contract BasenameResolver is
     event NodeChanged(bytes32 indexed node, bytes32 indexed basenode);
     event GatewayURLsChanged();
 
-	// storage slots for Base L2Resolver
-	// https://basescan.org/address/0xC6d566A56A1aFf6508b41f6c90ff131615583BCD#code
-	uint256 constant SLOT_VERSIONS = 0;
-	uint256 constant SLOT_ADDR = 2;
-	uint256 constant SLOT_TEXT = 10;
-	uint256 constant SLOT_CONTENTHASH = 3;
+    // storage slots for Base L2Resolver
+    // https://basescan.org/address/0xC6d566A56A1aFf6508b41f6c90ff131615583BCD#code
+    uint256 constant SLOT_VERSIONS = 0;
+    uint256 constant SLOT_ADDR = 2;
+    uint256 constant SLOT_TEXT = 10;
+    uint256 constant SLOT_CONTENTHASH = 3;
 
-	bytes32 constant NODE_ETH = keccak256(abi.encode(0, keccak256("eth")));
-	bytes32 constant NODE_BASE_ETH = keccak256(abi.encode(NODE_ETH, keccak256("base")));
+    bytes32 constant NODE_ETH = keccak256(abi.encode(0, keccak256("eth")));
+    bytes32 constant NODE_BASE_ETH =
+        keccak256(abi.encode(NODE_ETH, keccak256("base")));
 
     ENS immutable _ens;
     INameWrapper immutable _wrapper;
@@ -87,28 +88,21 @@ contract BasenameResolver is
         bytes4 selector = bytes4(data);
         if (selector == IAddrResolver.addr.selector) {
             req.setSlot(SLOT_ADDR); // addr
-            req.pushStack(1).follow(); // addr[version]
-            req.pushStack(0).follow(); // addr[version][node]
-            req.push(60).follow(); // addr[version][node][60]
+            req.follow().follow().push(60).follow(); // addr[version][node][60]
             req.readBytes().setOutput(0);
         } else if (selector == IAddressResolver.addr.selector) {
             (, uint256 coinType) = abi.decode(data[4:], (bytes32, uint256));
             req.setSlot(SLOT_ADDR); // addr
-            req.pushStack(1).follow(); // addr[version]
-            req.pushStack(0).follow(); // addr[version][node]
-            req.push(coinType).follow(); // addr[version][node][coinType]
+            req.follow().follow().push(coinType).follow(); // addr[version][node][coinType]
             req.readBytes().setOutput(0);
         } else if (selector == ITextResolver.text.selector) {
             (, string memory key) = abi.decode(data[4:], (bytes32, string));
             req.setSlot(SLOT_TEXT); // text
-            req.pushStack(1).follow(); // text[version]
-            req.pushStack(0).follow(); // text[version][node]
-            req.push(key).follow(); // text[version][node][key]
+            req.follow().follow().push(key).follow(); // text[version][node][key]
             req.readBytes().setOutput(0);
         } else if (selector == IContentHashResolver.contenthash.selector) {
             req.setSlot(SLOT_CONTENTHASH); // contenthash
-            req.pushStack(1).follow(); // contenthash[version]
-            req.pushStack(0).follow(); // contenthash[version][node]
+            req.follow().follow(); // contenthash[version][node]
             req.readBytes().setOutput(0);
         } else {
             revert UnsupportedResolverProfile(selector);

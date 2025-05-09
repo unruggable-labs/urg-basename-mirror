@@ -13,5 +13,8 @@ export const BASE_L2_RESOLVER = "0xc6d566a56a1aff6508b41f6c90ff131615583bcd";
 // free mainnet rpc
 export const MAINNET_PROVIDER_URL = "https://eth.drpc.org";
 
+// free base rpc
+export const BASE_PROVIDER_URL = "https://mainnet.base.org";
+
 // default gateways for base
-export const GATEWAYS = []; //'https://home.antistupid.com/http/'];
+export const GATEWAYS = []; // empty uses verifier default

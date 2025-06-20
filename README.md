@@ -9,7 +9,7 @@ Creates redirection from ENS name `name.eth` &rarr;  `name.base.eth`
 #### Deployments
 1. [`mainnet:0xd2399688478bf8b0587e4b3166E4C0Fd29A1c171`](https://etherscan.io/address/0xd2399688478bf8b0587e4b3166e4c0fd29a1c171#code)
 2. [`mainnet:0x3722662D8AaB07B216B14C02eF0ee940d14A4200`](https://etherscan.io/address/0x3722662D8AaB07B216B14C02eF0ee940d14A4200#code)
-3. [`mainnet:0x07b725d315a0d19c97A25127Bd4c103D1f7BbF56` (based on 17599cb)](https://etherscan.io/address/0x07b725d315a0d19c97A25127Bd4c103D1f7BbF56#code) ( slightly modified for self-hosted unchecked verifier used by tornadowithdraw.eth )
+3. [`mainnet:0x07b725d315a0d19c97A25127Bd4c103D1f7BbF56` (based on 17599cb)](https://etherscan.io/address/0x07b725d315a0d19c97A25127Bd4c103D1f7BbF56#code) ( slightly modified and deployed with self-hosted unchecked verifier used by tornadowithdraw.eth )
 
 #### Examples
 
